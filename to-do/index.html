@@ -3,52 +3,108 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Simple To-Do List</title>
+  <title>Advanced To-Do List</title>
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
 </head>
 
 <body ng-controller="ToDoController">
-  <h1>Simple To-Do List</h1>
+  <h1>Advanced To-Do List</h1>
 
   <form ng-submit="addTask()">
-    <input type="text" ng-model="newTask" placeholder="Add a new task" required>
+    <input type="text" ng-model="newTask.title" placeholder="Task Title" required>
+    <input type="text" ng-model="newTask.deadline" placeholder="Task Deadline (yyyy-mm-dd HH:MM)">
     <button type="submit">Add Task</button>
   </form>
 
   <ul>
-    <li ng-repeat="task in tasks">
-      <span>{{ task }}</span>
-      <button ng-click="deleteTask($index)">Delete</button>
+    <li ng-repeat="task in tasks" ng-class="{ 'completed': task.completed, 'active': task.isActive(), 'deadline-alert': task.showDeadlineAlert() }">
+      <span>{{ task.title }}</span>
+      <span>{{ task.deadline | date:'yyyy-MM-dd HH:mm' }}</span>
+      <button ng-click="completeTask(task)">Complete</button>
     </li>
   </ul>
 
   <script>
     angular.module('ToDoApp', [])
-      .controller('ToDoController', function($scope) {
-        // Check if localStorage is supported, otherwise use sessionStorage
+      .controller('ToDoController', function($scope, $interval) {
         var storage = window.localStorage || window.sessionStorage;
-
-        // Load tasks from storage or initialize an empty array
         $scope.tasks = JSON.parse(storage.getItem('tasks')) || [];
 
         $scope.addTask = function() {
-          if ($scope.newTask) {
-            $scope.tasks.push($scope.newTask);
+          if ($scope.newTask.title && $scope.newTask.deadline) {
+            var deadline = new Date($scope.newTask.deadline);
+            var createdDate = new Date();
+
+            var task = {
+              title: $scope.newTask.title,
+              deadline: deadline,
+              createdDate: createdDate,
+              completed: false,
+              status: ''
+            };
+
+            if (deadline > createdDate) {
+              task.status = 'scheduled';
+            } else if (deadline < createdDate) {
+              task.status = 'past deadline';
+            } else {
+              task.status = 'active';
+            }
+
+            $scope.tasks.push(task);
             $scope.newTask = '';
 
-            // Save tasks to storage
             storage.setItem('tasks', JSON.stringify($scope.tasks));
           }
         };
 
-        $scope.deleteTask = function(index) {
-          $scope.tasks.splice(index, 1);
+        $scope.completeTask = function(task) {
+          task.completed = true;
+          task.status = 'completed';
 
-          // Save tasks to storage
           storage.setItem('tasks', JSON.stringify($scope.tasks));
         };
+
+        $scope.updateTaskStatus = function() {
+          var currentDate = new Date();
+
+          $scope.tasks.forEach(function(task) {
+            if (task.status === 'scheduled' && task.deadline <= currentDate) {
+              task.status = 'active';
+            } else if (task.status === 'active' && task.deadline < currentDate) {
+              task.status = 'past deadline';
+            }
+          });
+        };
+
+        $scope.showDeadlineAlert = function(task) {
+          var currentDate = new Date();
+          var deadline = new Date(task.deadline);
+          var alertThreshold = new Date(deadline.getTime() - (60 * 60 * 1000)); // One hour before deadline
+
+          return task.status !== 'completed' && currentDate > alertThreshold;
+        };
+
+        $interval($scope.updateTaskStatus, 1000); // Check task statuses periodically
+
+        // Load tasks from storage or initialize an empty array
+        $scope.tasks = JSON.parse(storage.getItem('tasks')) || [];
       });
   </script>
+
+  <style>
+    .completed {
+      text-decoration: line-through;
+    }
+
+    .active {
+      font-weight: bold;
+    }
+
+    .deadline-alert {
+      color: red;
+    }
+  </style>
 </body>
 
 </html>
