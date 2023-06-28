@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="ToDoApp">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Simple To-Do List</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+</head>
+
+<body ng-controller="ToDoController">
+  <h1>Simple To-Do List</h1>
+
+  <form ng-submit="addTask()">
+    <input type="text" ng-model="newTask" placeholder="Add a new task" required>
+    <button type="submit">Add Task</button>
+  </form>
+
+  <ul>
+    <li ng-repeat="task in tasks">
+      <span>{{ task }}</span>
+      <button ng-click="deleteTask($index)">Delete</button>
+    </li>
+  </ul>
+
+  <script>
+    angular.module('ToDoApp', [])
+      .controller('ToDoController', function($scope) {
+        // Check if localStorage is supported, otherwise use sessionStorage
+        var storage = window.localStorage || window.sessionStorage;
+
+        // Load tasks from storage or initialize an empty array
+        $scope.tasks = JSON.parse(storage.getItem('tasks')) || [];
+
+        $scope.addTask = function() {
+          if ($scope.newTask) {
+            $scope.tasks.push($scope.newTask);
+            $scope.newTask = '';
+
+            // Save tasks to storage
+            storage.setItem('tasks', JSON.stringify($scope.tasks));
+          }
+        };
+
+        $scope.deleteTask = function(index) {
+          $scope.tasks.splice(index, 1);
+
+          // Save tasks to storage
+          storage.setItem('tasks', JSON.stringify($scope.tasks));
+        };
+      });
+  </script>
+</body>
+
+</html>
