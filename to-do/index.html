@@ -40,7 +40,8 @@
               deadline: deadline,
               createdDate: createdDate,
               completed: false,
-              status: ''
+              status: '',
+              notified: false
             };
 
             if (deadline > createdDate) {
@@ -89,7 +90,7 @@
             }
             return true;
           }
-          
+
           if (task.status === 'active' && currentDate > deadline) {
             if (!task.notified) {
               task.notified = true;
@@ -97,11 +98,17 @@
             }
             return true;
           }
-          
+
           return false;
         };
 
         $interval($scope.updateTaskStatus, 1000); // Check task statuses periodically
+
+        $interval(function() {
+          $scope.tasks.forEach(function(task) {
+            $scope.showDeadlineAlert(task);
+          });
+        }, 60000); // Check for task notifications every minute
 
         // Load tasks from storage or initialize an empty array
         $scope.tasks = JSON.parse(storage.getItem('tasks')) || [];
