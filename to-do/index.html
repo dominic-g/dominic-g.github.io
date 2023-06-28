@@ -12,7 +12,7 @@
 
   <form ng-submit="addTask()">
     <input type="text" ng-model="newTask.title" placeholder="Task Title" required>
-    <input type="text" ng-model="newTask.deadline" placeholder="Task Deadline (yyyy-mm-dd HH:MM)">
+    <input type="datetime-local" ng-model="newTask.deadline" required>
     <button type="submit">Add Task</button>
   </form>
 
@@ -82,13 +82,47 @@
           var deadline = new Date(task.deadline);
           var alertThreshold = new Date(deadline.getTime() - (60 * 60 * 1000)); // One hour before deadline
 
-          return task.status !== 'completed' && currentDate > alertThreshold;
+          if (task.status !== 'completed' && currentDate > alertThreshold) {
+            if (!task.notified) {
+              task.notified = true;
+              showNotification('Deadline Alert', 'Task "' + task.title + '" is due in one hour!');
+            }
+            return true;
+          }
+          
+          if (task.status === 'active' && currentDate > deadline) {
+            if (!task.notified) {
+              task.notified = true;
+              showNotification('Deadline Alert', 'Task "' + task.title + '" is due now!');
+            }
+            return true;
+          }
+          
+          return false;
         };
 
         $interval($scope.updateTaskStatus, 1000); // Check task statuses periodically
 
         // Load tasks from storage or initialize an empty array
         $scope.tasks = JSON.parse(storage.getItem('tasks')) || [];
+
+        // Function to show browser notification
+        function showNotification(title, message) {
+          if (Notification.permission === 'granted') {
+            new Notification(title, { body: message });
+          } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission(function(permission) {
+              if (permission === 'granted') {
+                new Notification(title, { body: message });
+              }
+            });
+          }
+        }
+
+        // Request permission for browser notifications on page load
+        if (Notification.permission !== 'granted') {
+          Notification.requestPermission();
+        }
       });
   </script>
 
@@ -102,7 +136,7 @@
     }
 
     .deadline-alert {
-      color: red;
+      background-color: #FFCCCC;
     }
   </style>
 </body>
